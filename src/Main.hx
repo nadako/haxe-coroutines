@@ -43,13 +43,21 @@ class Main {
 
 		// generator
 		var gen = new Gen(transform(function(yield):Void {
-			yield(1);
-			yield(2);
-			yield(3);
+			yield(1); // first Fibonacci number
+			var cur = 1;
+			var next = 1;
+			while (true) {
+				yield(next); // next Fibonacci number
+				var tmp = cur + next;
+				cur = next;
+				next = tmp;
+			}
 		}));
 
 		for (v in gen) {
 			trace(v);
+			if (v > 10000)
+				break;
 		}
 	}
 }

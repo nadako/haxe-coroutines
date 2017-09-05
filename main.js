@@ -71,8 +71,10 @@ Main.main = function() {
 	var gen = new Gen(function($yield,__continuation1) {
 		var __state1 = 0;
 		var tmp01;
+		var cur;
+		var next;
 		var tmp11;
-		var tmp2;
+		var tmp;
 		var __stateMachine1 = null;
 		__stateMachine1 = function(__result1) {
 			while(true) switch(__state1) {
@@ -82,16 +84,25 @@ Main.main = function() {
 				return;
 			case 1:
 				tmp01 = __result1;
+				cur = 1;
+				next = 1;
 				__state1 = 2;
-				$yield(2,__stateMachine1);
-				return;
+				break;
 			case 2:
-				tmp11 = __result1;
 				__state1 = 3;
-				$yield(3,__stateMachine1);
-				return;
+				break;
 			case 3:
-				tmp2 = __result1;
+				__state1 = 4;
+				$yield(next,__stateMachine1);
+				return;
+			case 4:
+				tmp11 = __result1;
+				tmp = cur + next;
+				cur = next;
+				next = tmp;
+				__state1 = 2;
+				break;
+			case 5:
 				__state1 = -1;
 				__continuation1(null);
 				return;
@@ -101,7 +112,13 @@ Main.main = function() {
 		};
 		return __stateMachine1;
 	});
-	while(gen.hasNext()) console.log("Main.hx:52:",gen.next());
+	while(gen.hasNext()) {
+		var v = gen.next();
+		console.log("Main.hx:58:",v);
+		if(v > 10000) {
+			break;
+		}
+	}
 };
 var GenState = { __ename__ : true, __constructs__ : ["NotReady","Ready","Done","Failed"] };
 GenState.NotReady = ["NotReady",0];
