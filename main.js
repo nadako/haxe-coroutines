@@ -18,7 +18,7 @@ Main.getNumberPromise = function() {
 		return;
 	});
 };
-Main.main = function() {
+Main.test_async = function() {
 	((function(n,__continuation) {
 		var __state = 0;
 		var tmp0;
@@ -68,57 +68,63 @@ Main.main = function() {
 		console.log("Main.hx:40:","Result: " + value);
 		return;
 	}))(null);
-	var v = new Gen(function($yield,__continuation1) {
-		var __state1 = 0;
-		var tmp01;
+};
+Main.test_generator = function() {
+	var v = new Gen(function($yield,__continuation) {
+		var __state = 0;
+		var tmp0;
 		var cur;
 		var next;
-		var tmp11;
+		var tmp1;
 		var tmp;
-		var __stateMachine1 = null;
-		__stateMachine1 = function(__result1) {
-			while(true) switch(__state1) {
+		var __stateMachine = null;
+		__stateMachine = function(__result) {
+			while(true) switch(__state) {
 			case 0:
-				__state1 = 1;
-				$yield(1,__stateMachine1);
+				__state = 1;
+				$yield(1,__stateMachine);
 				return;
 			case 1:
-				tmp01 = __result1;
+				tmp0 = __result;
 				cur = 1;
 				next = 1;
-				__state1 = 2;
+				__state = 2;
 				break;
 			case 2:
-				__state1 = 3;
+				__state = 3;
 				break;
 			case 3:
-				__state1 = 4;
-				$yield(next,__stateMachine1);
+				__state = 4;
+				$yield(next,__stateMachine);
 				return;
 			case 4:
-				tmp11 = __result1;
+				tmp1 = __result;
 				tmp = cur + next;
 				cur = next;
 				next = tmp;
-				__state1 = 2;
+				__state = 2;
 				break;
 			case 5:
-				__state1 = -1;
-				__continuation1(null);
+				__state = -1;
+				__continuation(null);
 				return;
 			default:
 				throw new js__$Boot_HaxeError("Invalid state");
 			}
 		};
-		return __stateMachine1;
+		return __stateMachine;
 	});
 	while(v.hasNext()) {
 		var v1 = v.next();
-		console.log("Main.hx:58:",v1);
+		console.log("Main.hx:59:",v1);
 		if(v1 > 10000) {
 			break;
 		}
 	}
+};
+Main.main = function() {
+	Main.test_async();
+	Main.test_generator();
 };
 var GenState = { __ename__ : true, __constructs__ : ["NotReady","Ready","Done","Failed"] };
 GenState.NotReady = ["NotReady",0];

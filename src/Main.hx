@@ -19,7 +19,7 @@ class Main {
 	static function test(n:Int, cont:Continuation<String>):Void
 		cont('hi $n times');
 
-	static function main() {
+	static function test_async() {
 		// sample coroutine
 		var coro = transform(function(n:Int):Int {
 
@@ -39,8 +39,9 @@ class Main {
 
 		var cont = coro(10, value -> trace('Result: $value'));
 		cont(null); // manually start
+	}
 
-
+	static function test_generator() {
 		// generator
 		var fibCoro = transform(function(yield):Void {
 			yield(1); // first Fibonacci number
@@ -59,6 +60,11 @@ class Main {
 			if (v > 10000)
 				break;
 		}
+	}
+
+	static function main() {
+		test_async();
+		test_generator();
 	}
 }
 
