@@ -1,4 +1,5 @@
 #if macro
+import haxe.ds.GenericStack;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
@@ -11,6 +12,8 @@ enum Edge {
 	Loop(bbHead:BasicBlock, bbBody:BasicBlock, bbNext:BasicBlock);
 	LoopHead(bbBody:BasicBlock, bbNext:BasicBlock);
 	LoopBack(bbHead:BasicBlock);
+	LoopContinue(bbHead:BasicBlock);
+	LoopBreak(bbNext:BasicBlock);
 	Return;
 }
 
@@ -44,12 +47,32 @@ class UnreachableBlock extends BasicBlock {
 	override function setEdge(e) {}
 }
 
+class LoopContext {
+	public var bbHead:BasicBlock;
+	public var breaks:Array<BasicBlock>;
+
+	public function new(bbHead) {
+		this.bbHead = bbHead;
+		breaks = [];
+	}
+
+	public function addBreak(bb) {
+		breaks.push(bb);
+	}
+
+	public function close(bbNext:BasicBlock) {
+		for (bb in breaks)
+			bb.setEdge(LoopBreak(bbNext));
+	}
+}
+
 class FlowGraph {
 	static var fakeValue = macro null;
 
 	public var hasSuspend(default,null) = false;
 	var nextBlockId = 0;
 	var bbUnreachable = new UnreachableBlock(-1);
+	var loopStack = new GenericStack<LoopContext>();
 
 	function new() {}
 
@@ -113,16 +136,34 @@ class FlowGraph {
 				bbHeadNext.addElement(r.e);
 
 				var bbBody = createBlock();
+				var loopContext = new LoopContext(bbHead);
+				loopStack.add(loopContext);
 				var bbBodyNext = block(bbBody, ebody);
+				loopStack.pop();
 				bbBodyNext.setEdge(LoopBack(bbHead));
 
 				var bbNext = createBlock();
+				loopContext.close(bbNext);
 				bbHeadNext.setEdge(LoopHead(bbBody, bbNext));
 
 				bb.setEdge(Loop(bbHead, bbBody, bbNext));
 				bbNext;
 
-			case EBreak | EContinue | EDisplay(_,_) | EFor(_,_) | EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EWhile(_,_,_):
+			case EContinue:
+				var loopContext = loopStack.first();
+				if (loopContext == null)
+					throw new Error("continue outside of loop", e.pos);
+				bb.setEdge(LoopContinue(loopContext.bbHead));
+				bbUnreachable;
+
+			case EBreak:
+				var loopContext = loopStack.first();
+				if (loopContext == null)
+					throw new Error("break outside of loop", e.pos);
+				loopContext.addBreak(bb);
+				bbUnreachable;
+
+			case EDisplay(_,_) | EFor(_,_) | EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EWhile(_,_,_):
 				throw new Error('${e.expr.getName()} not implemented', e.pos);
 		}
 	}
@@ -148,11 +189,11 @@ class FlowGraph {
 				var r = value(bb, e1);
 				{bb: r.bb, e: {pos: e.pos, expr: EParenthesis(r.e)}};
 
-			case EReturn(_):
+			case EReturn(_) | EBreak | EContinue:
 				bb = blockElement(bb, e);
 				{bb: bb, e: fakeValue};
 
-			case EBinop(op = OpEq | OpNotEq | OpGt | OpGte | OpLt | OpLte | OpAdd | OpSub, ea, eb):
+			case EBinop(op, ea, eb):
 				var r = value(bb, ea);
 				bb = r.bb;
 				ea = r.e;
@@ -233,7 +274,7 @@ class FlowGraph {
 			case EWhile(_, _ ,_) | EFor(_, _):
 				throw new Error("Loop in value places are not allowed", e.pos);
 
-			case EBinop(_,_,_) | EBreak | EContinue | EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_):
+			case EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_):
 				throw new Error('${e.expr.getName()} not implemented', e.pos);
 		}
 	}
@@ -366,10 +407,10 @@ class Macro {
 						}
 					});
 
-				case LoopBack(bbHead):
+				case LoopBack(bbGoto) | LoopContinue(bbGoto) | LoopBreak(bbGoto):
 					for (e in bb.elements) exprs.push(e);
 					exprs.push(macro {
-						__state = $v{bbHead.id};
+						__state = $v{bbGoto.id};
 					});
 
 				case None:
@@ -433,6 +474,14 @@ class Macro {
 
 				case LoopHead(_, _) | LoopBack(_):
 					for (e in bb.elements) exprs.push(e);
+
+				case LoopContinue(_):
+					for (e in bb.elements) exprs.push(e);
+					exprs.push(macro continue);
+
+				case LoopBreak(_):
+					for (e in bb.elements) exprs.push(e);
+					exprs.push(macro break);
 
 				case None:
 					throw "Unitialized block";
