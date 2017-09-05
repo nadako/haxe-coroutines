@@ -67,10 +67,21 @@ class FlowGraph {
 
 	function blockElement(bb:BasicBlock, e:Expr):BasicBlock {
 		return switch e.expr {
-			case EConst(_) | EField(_, _) |  ECall(_,_) | EBinop(_, _, _) | EUnop(_, _, _) | EParenthesis(_):
+			case EDisplayNew(_):
+				bb;
+
+			case EBlock(exprs):
+				for (e in exprs)
+					bb = blockElement(bb, e);
+				bb;
+
+			case EConst(_) | EField(_, _) |  ECall(_,_) | EBinop(_, _, _) | EUnop(_, _, _) | EParenthesis(_) | EArray(_, _) | EArrayDecl(_) | ECast(_, _) | ECheckType(_, _) | EObjectDecl(_) | ENew(_, _):
 				var r = value(bb, e);
 				r.bb.addElement(r.e);
 				r.bb;
+
+			case EMeta(_, e2):
+				blockElement(bb, e2); // TODO: just lose the meta, meh
 
 			case EVars(vl):
 				for (v in vl) {
@@ -94,7 +105,7 @@ class FlowGraph {
 				}
 				bbUnreachable;
 
-			case EWhile(econd,ebody,true):
+			case EWhile(econd, ebody, true):
 				var bbHead = createBlock();
 
 				var r = value(bbHead, econd);
@@ -111,7 +122,7 @@ class FlowGraph {
 				bb.setEdge(Loop(bbHead, bbBody, bbNext));
 				bbNext;
 
-			case EArray(_,_) | EArrayDecl(_) | EBlock(_) | EBreak | ECast(_,_) | ECheckType(_,_) | EContinue | EDisplay(_,_) | EDisplayNew(_) | EFor(_,_) | EFunction(_,_) | EIf(_,_,_) | EMeta(_,_) | ENew(_,_) | EObjectDecl(_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EWhile(_,_,_):
+			case EBreak | EContinue | EDisplay(_,_) | EFor(_,_) | EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EWhile(_,_,_):
 				throw new Error('${e.expr.getName()} not implemented', e.pos);
 		}
 	}
