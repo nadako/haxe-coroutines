@@ -14,6 +14,8 @@ enum Edge {
 	LoopBack(bbHead:BasicBlock);
 	LoopContinue(bbHead:BasicBlock);
 	LoopBreak(bbNext:BasicBlock);
+	IfThen(bbThen:BasicBlock, bbNext:BasicBlock);
+	IfThenElse(bbThen:BasicBlock, bbElse:BasicBlock, bbNext:BasicBlock);
 	Return;
 }
 
@@ -163,7 +165,30 @@ class FlowGraph {
 				loopContext.addBreak(bb);
 				bbUnreachable;
 
-			case EDisplay(_,_) | EFor(_,_) | EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EWhile(_,_,_):
+			case EIf(econd, ethen, eelse) | ETernary(econd, ethen, eelse):
+				var r = value(bb, econd);
+				bb = r.bb;
+				bb.addElement(r.e);
+
+				var bbThen = createBlock();
+				var bbThenNext = block(bbThen, ethen);
+
+				var bbNext;
+				if (eelse != null) {
+					var bbElse = createBlock();
+					var bbElseNext = block(bbElse, eelse);
+					bbNext = createBlock();
+					bbThenNext.setEdge(Next(bbNext));
+					bbElseNext.setEdge(Next(bbNext));
+					bb.setEdge(IfThenElse(bbThen, bbElse, bbNext));
+				} else {
+					bbNext = createBlock();
+					bbThenNext.setEdge(Next(bbNext));
+					bb.setEdge(IfThen(bbThen, bbNext));
+				}
+				bbNext;
+
+			case EDisplay(_,_) | EFor(_,_) | EFunction(_,_) | ESwitch(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EWhile(_,_,_):
 				throw new Error('${e.expr.getName()} not implemented', e.pos);
 		}
 	}
@@ -274,7 +299,39 @@ class FlowGraph {
 			case EWhile(_, _ ,_) | EFor(_, _):
 				throw new Error("Loop in value places are not allowed", e.pos);
 
-			case EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_):
+			case EIf(econd, ethen, eelse) | ETernary(econd, ethen, eelse):
+				if (eelse == null)
+					throw new Error("If in a value place must have an else branch", e.pos);
+
+				var r = value(bb, econd);
+				bb = r.bb;
+				bb.addElement(r.e);
+
+				var tmpVarName = "tmp" + (tmpVarId++);
+				bb.declareVar(tmpVarName, null);
+
+				var bbThen = createBlock();
+				var bbThenNext = {
+					var r = value(bbThen, ethen);
+					r.bb.assignVar(tmpVarName, r.e);
+					r.bb;
+				}
+
+				var bbElse = createBlock();
+				var bbElseNext = {
+					var r = value(bbElse, eelse);
+					r.bb.assignVar(tmpVarName, r.e);
+					r.bb;
+				}
+
+				var bbNext = createBlock();
+				bbThenNext.setEdge(Next(bbNext));
+				bbElseNext.setEdge(Next(bbNext));
+				bb.setEdge(IfThenElse(bbThen, bbElse, bbNext));
+
+				{bb: bbNext, e: macro $i{tmpVarName}};
+
+			case EFunction(_,_) | ESwitch(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_):
 				throw new Error('${e.expr.getName()} not implemented', e.pos);
 		}
 	}
@@ -393,6 +450,38 @@ class Macro {
 					loop(bbNext);
 					exprs.push(macro __state = $v{bbNext.id});
 
+				case IfThen(bbThen, bbNext):
+					var econd = bb.elements[bb.elements.length - 1];
+					for (i in 0...bb.elements.length - 1)
+						exprs.push(bb.elements[i]);
+
+					loop(bbThen);
+					loop(bbNext);
+
+					exprs.push(macro {
+						if ($econd) {
+							__state = $v{bbThen.id};
+						} else {
+							__state = $v{bbNext.id};
+						}
+					});
+
+				case IfThenElse(bbThen, bbElse, _):
+					var econd = bb.elements[bb.elements.length - 1];
+					for (i in 0...bb.elements.length - 1)
+						exprs.push(bb.elements[i]);
+
+					loop(bbThen);
+					loop(bbElse);
+
+					exprs.push(macro {
+						if ($econd) {
+							__state = $v{bbThen.id};
+						} else {
+							__state = $v{bbElse.id};
+						}
+					});
+
 				case LoopHead(bbBody, bbNext):
 					var econd = bb.elements[bb.elements.length - 1];
 
@@ -482,6 +571,9 @@ class Macro {
 				case LoopBreak(_):
 					for (e in bb.elements) exprs.push(e);
 					exprs.push(macro break);
+
+				case IfThen(_, _) | IfThenElse(_, _, _):
+					throw "TODO";
 
 				case None:
 					throw "Unitialized block";
