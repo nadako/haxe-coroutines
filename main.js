@@ -68,7 +68,7 @@ Main.main = function() {
 		console.log("Main.hx:40:","Result: " + value);
 		return;
 	}))(null);
-	var gen = new Gen(function($yield,__continuation1) {
+	var v = new Gen(function($yield,__continuation1) {
 		var __state1 = 0;
 		var tmp01;
 		var cur;
@@ -112,10 +112,10 @@ Main.main = function() {
 		};
 		return __stateMachine1;
 	});
-	while(gen.hasNext()) {
-		var v = gen.next();
-		console.log("Main.hx:58:",v);
-		if(v > 10000) {
+	while(v.hasNext()) {
+		var v1 = v.next();
+		console.log("Main.hx:58:",v1);
+		if(v1 > 10000) {
 			break;
 		}
 	}

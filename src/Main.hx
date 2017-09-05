@@ -42,7 +42,7 @@ class Main {
 
 
 		// generator
-		var gen = new Gen(transform(function(yield):Void {
+		var fibCoro = transform(function(yield):Void {
 			yield(1); // first Fibonacci number
 			var cur = 1;
 			var next = 1;
@@ -52,9 +52,9 @@ class Main {
 				cur = next;
 				next = tmp;
 			}
-		}));
+		});
 
-		for (v in gen) {
+		for (v in new Gen(fibCoro)) {
 			trace(v);
 			if (v > 10000)
 				break;
