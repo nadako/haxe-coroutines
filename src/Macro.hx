@@ -156,22 +156,6 @@ class FlowGraph {
 				var r = value(bb, e);
 				{bb: r.bb, e: {expr: EUnop(op, postfix, r.e), pos: e.pos}};
 
-			case ECall(ef = {expr: EConst(CIdent("await" | "awaitP" | "test"))}, args): // any suspending function, actually
-				hasSuspend = true;
-
-				args = [for (e in args) {
-					var r = value(bb, e);
-					bb = r.bb;
-					r.e;
-				}];
-
-				var tmpVarName = "tmp" + (tmpVarId++);
-				bb.declareVar(tmpVarName, null);
-				var bbNext = createBlock();
-				bbNext.addElement(macro $i{tmpVarName} = __result);
-				bb.setEdge(Suspend(ef, args, bbNext));
-				{bb: bbNext, e: macro $i{tmpVarName}};
-
 			case ECall(eobj, args):
 				call(bb, eobj, args, e.pos);
 
@@ -185,14 +169,24 @@ class FlowGraph {
 		bb = r.bb;
 		eobj = r.e;
 
-		var newArgs = [];
-		for (e in args) {
-			r = value(bb, e);
+		args = [for (e in args) {
+			var r = value(bb, e);
 			bb = r.bb;
-			newArgs.push(r.e);
-		}
+			r.e;
+		}];
 
-		return {bb: bb, e: {expr: ECall(eobj, newArgs), pos: pos}};
+		return switch eobj.expr {
+			case EConst(CIdent("await" | "awaitP" | "test")): // any suspending function, actually
+				hasSuspend = true;
+				var tmpVarName = "tmp" + (tmpVarId++);
+				bb.declareVar(tmpVarName, null);
+				var bbNext = createBlock();
+				bbNext.addElement(macro $i{tmpVarName} = __result);
+				bb.setEdge(Suspend(eobj, args, bbNext));
+				{bb: bbNext, e: macro $i{tmpVarName}};
+			case _:
+				{bb: bb, e: {expr: ECall(eobj, args), pos: pos}};
+		}
 	}
 
 	function createBlock() return new BasicBlock(nextBlockId++);
