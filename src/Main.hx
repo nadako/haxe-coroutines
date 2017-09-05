@@ -1,8 +1,8 @@
-import Macro.transform;
 import js.Promise;
 
 typedef Continuation<T> = T->Void;
 
+@:build(Macro.build())
 class Main {
 	// some async API
 	static var nextNumber = 0;
@@ -19,52 +19,39 @@ class Main {
 	static function test(n:Int, cont:Continuation<String>):Void
 		cont('hi $n times');
 
-	static function test_async() {
-		// sample coroutine
-		var coro = transform(function(n:Int):Int {
+	@:suspend static function someAsync():Int {
+		trace("hi");
+		while (await(getNumber) < 10) {
+			trace('wait for it...');
 
-			trace("hi");
-
-			while (await(getNumber) < 10) {
-				trace('wait for it...');
-
-				var promise = getNumberPromise();
-				trace(awaitPromise(promise));
-			}
-
-			trace("bye");
-			return 15;
-
-		});
-
-		var cont = coro(10, value -> trace('Result: $value'));
-		cont(null); // manually start
+			var promise = getNumberPromise();
+			trace(awaitPromise(promise));
+		}
+		trace("bye");
+		return 15;
 	}
 
-	static function test_generator() {
-		// generator
-		var fibCoro = transform(function(yield):Void {
-			yield(1); // first Fibonacci number
-			var cur = 1;
-			var next = 1;
-			while (true) {
-				yield(next); // next Fibonacci number
-				var tmp = cur + next;
-				cur = next;
-				next = tmp;
-			}
-		});
-
-		for (v in new Gen(fibCoro)) {
-			trace(v);
-			if (v > 10000)
-				break;
+	@:suspend static function fibonacci(yield):Void {
+		yield(1); // first Fibonacci number
+		var cur = 1;
+		var next = 1;
+		while (true) {
+			yield(next); // next Fibonacci number
+			var tmp = cur + next;
+			cur = next;
+			next = tmp;
 		}
 	}
 
 	static function main() {
-		test_async();
-		test_generator();
+		var coro = someAsync(result -> trace("Result: " + result));
+		coro(null); // start
+
+		for (v in new Gen(fibonacci)) {
+			trace(v);
+			if (v > 10000)
+				break;
+		}
 	}
 }
 

@@ -18,113 +18,109 @@ Main.getNumberPromise = function() {
 		return;
 	});
 };
-Main.test_async = function() {
-	((function(n,__continuation) {
-		var __state = 0;
-		var tmp0;
-		var promise;
-		var tmp1;
-		var __stateMachine = null;
-		__stateMachine = function(__result) {
-			while(true) switch(__state) {
-			case 0:
-				console.log("Main.hx:26:","hi");
-				__state = 1;
-				break;
-			case 1:
-				__state = 2;
-				Main.getNumber(__stateMachine);
-				return;
-			case 2:
-				tmp0 = __result;
-				if(tmp0 < 10) {
-					__state = 3;
-				} else {
-					__state = 5;
-				}
-				break;
-			case 3:
-				console.log("Main.hx:29:","wait for it...");
-				promise = Main.getNumberPromise();
-				__state = 4;
-				promise.then(__stateMachine);
-				return;
-			case 4:
-				tmp1 = __result;
-				console.log("Main.hx:32:",tmp1);
-				__state = 1;
-				break;
-			case 5:
-				console.log("Main.hx:35:","bye");
-				__state = -1;
-				__continuation(15);
-				return;
-			default:
-				throw new js__$Boot_HaxeError("Invalid state");
+Main.someAsync = function(__continuation) {
+	var __state = 0;
+	var tmp0;
+	var promise;
+	var tmp1;
+	var __stateMachine = null;
+	__stateMachine = function(__result) {
+		while(true) switch(__state) {
+		case 0:
+			console.log("Main.hx:23:","hi");
+			__state = 1;
+			break;
+		case 1:
+			__state = 2;
+			Main.getNumber(__stateMachine);
+			return;
+		case 2:
+			tmp0 = __result;
+			if(tmp0 < 10) {
+				__state = 3;
+			} else {
+				__state = 5;
 			}
-		};
-		return __stateMachine;
-	})(10,function(value) {
-		console.log("Main.hx:40:","Result: " + value);
+			break;
+		case 3:
+			console.log("Main.hx:25:","wait for it...");
+			promise = Main.getNumberPromise();
+			__state = 4;
+			promise.then(__stateMachine);
+			return;
+		case 4:
+			tmp1 = __result;
+			console.log("Main.hx:28:",tmp1);
+			__state = 1;
+			break;
+		case 5:
+			console.log("Main.hx:30:","bye");
+			__state = -1;
+			__continuation(15);
+			return;
+		default:
+			throw new js__$Boot_HaxeError("Invalid state");
+		}
+	};
+	return __stateMachine;
+};
+Main.fibonacci = function($yield,__continuation) {
+	var __state = 0;
+	var tmp0;
+	var cur;
+	var next;
+	var tmp1;
+	var tmp;
+	var __stateMachine = null;
+	__stateMachine = function(__result) {
+		while(true) switch(__state) {
+		case 0:
+			__state = 1;
+			$yield(1,__stateMachine);
+			return;
+		case 1:
+			tmp0 = __result;
+			cur = 1;
+			next = 1;
+			__state = 2;
+			break;
+		case 2:
+			__state = 3;
+			break;
+		case 3:
+			__state = 4;
+			$yield(next,__stateMachine);
+			return;
+		case 4:
+			tmp1 = __result;
+			tmp = cur + next;
+			cur = next;
+			next = tmp;
+			__state = 2;
+			break;
+		case 5:
+			__state = -1;
+			__continuation(null);
+			return;
+		default:
+			throw new js__$Boot_HaxeError("Invalid state");
+		}
+	};
+	return __stateMachine;
+};
+Main.main = function() {
+	(Main.someAsync(function(result) {
+		console.log("Main.hx:47:","Result: " + result);
 		return;
 	}))(null);
-};
-Main.test_generator = function() {
-	var v = new Gen(function($yield,__continuation) {
-		var __state = 0;
-		var tmp0;
-		var cur;
-		var next;
-		var tmp1;
-		var tmp;
-		var __stateMachine = null;
-		__stateMachine = function(__result) {
-			while(true) switch(__state) {
-			case 0:
-				__state = 1;
-				$yield(1,__stateMachine);
-				return;
-			case 1:
-				tmp0 = __result;
-				cur = 1;
-				next = 1;
-				__state = 2;
-				break;
-			case 2:
-				__state = 3;
-				break;
-			case 3:
-				__state = 4;
-				$yield(next,__stateMachine);
-				return;
-			case 4:
-				tmp1 = __result;
-				tmp = cur + next;
-				cur = next;
-				next = tmp;
-				__state = 2;
-				break;
-			case 5:
-				__state = -1;
-				__continuation(null);
-				return;
-			default:
-				throw new js__$Boot_HaxeError("Invalid state");
-			}
-		};
-		return __stateMachine;
-	});
+	var v = new Gen(Main.fibonacci);
 	while(v.hasNext()) {
 		var v1 = v.next();
-		console.log("Main.hx:59:",v1);
+		console.log("Main.hx:51:",v1);
 		if(v1 > 10000) {
 			break;
 		}
 	}
-};
-Main.main = function() {
-	Main.test_async();
-	Main.test_generator();
 };
 var GenState = { __ename__ : true, __constructs__ : ["NotReady","Ready","Done","Failed"] };
 GenState.NotReady = ["NotReady",0];

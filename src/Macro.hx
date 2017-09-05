@@ -383,6 +383,18 @@ class Macro {
 	}
 
 	#if macro
+	static function build() {
+		var fields = Context.getBuildFields();
+		for (field in fields) {
+			switch field.kind {
+				case FFun(fun) if (Lambda.exists(field.meta, m -> m.name == ":suspend")):
+					field.kind = FFun(doTransform(fun, field.pos));
+				case _:
+			}
+		}
+		return fields;
+	}
+
 	static function doTransform(fun:Function, pos:Position):Function {
 		var returnCT = if (fun.ret != null) fun.ret else throw new Error("Return type hint expected", pos);
 		if (returnCT.toString() == "Void") returnCT = macro : Dynamic;
