@@ -374,16 +374,17 @@ class FlowGraph {
 
 class Macro {
 	public static macro function transform(expr) {
-		var fun, name;
-		switch expr.expr {
-			case EFunction(n, f):
-				name = n;
-				fun = f;
+		return switch expr.expr {
+			case EFunction(name, fun):
+				{expr: EFunction(name, doTransform(fun, expr.pos)), pos: expr.pos};
 			case _:
 				throw new Error("Function expected", expr.pos);
 		}
+	}
 
-		var returnCT = if (fun.ret != null) fun.ret else throw new Error("Return type hint expected", expr.pos);
+	#if macro
+	static function doTransform(fun:Function, pos:Position):Function {
+		var returnCT = if (fun.ret != null) fun.ret else throw new Error("Return type hint expected", pos);
 		if (returnCT.toString() == "Void") returnCT = macro : Dynamic;
 
 		var coroArgs = fun.args.copy();
@@ -400,19 +401,13 @@ class Macro {
 
 		trace(coroExpr.toString());
 
-		var expr = {
-			pos: expr.pos,
-			expr: EFunction(name, {
-				args: coroArgs,
-				ret: macro : Continuation<Any>,
-				expr: coroExpr
-			})
+		return {
+			args: coroArgs,
+			ret: macro : Continuation<Any>,
+			expr: coroExpr
 		};
-
-		return expr;
 	}
 
-	#if macro
 	static function buildStateMachine(bbRoot:BasicBlock, pos:Position):Expr {
 		var cases = new Array<Case>();
 		var varDecls = [];
