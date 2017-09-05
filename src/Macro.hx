@@ -120,7 +120,7 @@ class FlowGraph {
 
 	function value(bb:BasicBlock, e:Expr):{bb:BasicBlock, e:Expr} {
 		return switch e.expr {
-			case EConst(_) | EBlock([]):
+			case EConst(_) | EBlock([]) | EDisplayNew(_):
 				{bb: bb, e: e};
 
 			case EBlock(el):
@@ -159,7 +159,70 @@ class FlowGraph {
 			case ECall(eobj, args):
 				call(bb, eobj, args, e.pos);
 
-			case EArray(_,_) | EArrayDecl(_) | EBinop(_,_,_) | EBreak | ECast(_,_) | ECheckType(_,_) | EContinue | EDisplay(_,_) | EDisplayNew(_) | EFor(_,_) | EFunction(_,_) | EIf(_,_,_) | EMeta(_,_) | ENew(_,_) | EObjectDecl(_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_) | EVars(_) | EWhile(_,_,_):
+			case EArray(eobj, eindex):
+				var r = value(bb, eobj);
+				eobj = r.e;
+				bb = r.bb;
+
+				r = value(bb, eindex);
+				eindex = r.e;
+				bb = r.bb;
+
+				{bb: bb, e: {expr: EArray(eobj, eindex), pos: e.pos}};
+
+			case EArrayDecl(el):
+				el = [
+					for (e in el) {
+						var r = value(bb, e);
+						bb = r.bb;
+						e;
+					}
+				];
+				{bb: bb, e: {expr: EArrayDecl(el), pos: e.pos}};
+
+			case ENew(tp, args):
+				args = [
+					for (e in args) {
+						var r = value(bb, e);
+						bb = r.bb;
+						e;
+					}
+				];
+				{bb: bb, e: {expr: ENew(tp, args), pos: e.pos}};
+
+			case EObjectDecl(fields):
+				fields = [
+					for (f in fields) {
+						var r = value(bb, f.expr);
+						bb = r.bb;
+						{field: f.field, expr: r.e};
+					}
+				];
+				{bb: bb, e: {expr: EObjectDecl(fields), pos: e.pos}};
+
+			case ECast(eobj, t):
+				var r = value(bb, eobj);
+				{bb: r.bb, e: {expr: ECast(r.e, t), pos: e.pos}};
+
+			case ECheckType(eobj, t):
+				var r = value(bb, eobj);
+				{bb: r.bb, e: {expr: ECheckType(r.e, t), pos: e.pos}};
+
+			case EDisplay(eobj, c):
+				var r = value(bb, eobj);
+				{bb: r.bb, e: {expr: EDisplay(r.e, c), pos: e.pos}};
+
+			case EMeta(m, eobj):
+				var r = value(bb, eobj);
+				{bb: r.bb, e: {expr: EMeta(m, r.e), pos: e.pos}};
+
+			case EVars(_):
+				throw new Error("Var declaration in value places are not allowed", e.pos);
+
+			case EWhile(_, _ ,_) | EFor(_, _):
+				throw new Error("Loop in value places are not allowed", e.pos);
+
+			case EBinop(_,_,_) | EBreak | EContinue | EFunction(_,_) | EIf(_,_,_) | ESwitch(_,_,_) | ETernary(_,_,_) | EThrow(_) | ETry(_,_) | EUntyped(_):
 				throw new Error('${e.expr.getName()} not implemented', e.pos);
 		}
 	}
