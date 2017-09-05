@@ -348,7 +348,7 @@ class FlowGraph {
 		}];
 
 		return switch eobj.expr {
-			case EConst(CIdent("await" | "awaitPromise" | "test")): // any suspending function, actually
+			case EConst(CIdent("await" | "awaitPromise" | "test" | "yield")): // any suspending function, actually
 				hasSuspend = true;
 				var tmpVarName = "tmp" + (tmpVarId++);
 				bb.declareVar(tmpVarName, null);
@@ -404,7 +404,7 @@ class Macro {
 			pos: expr.pos,
 			expr: EFunction(name, {
 				args: coroArgs,
-				ret: macro : Void,
+				ret: macro : Continuation<Any>,
 				expr: coroExpr
 			})
 		};
@@ -532,7 +532,8 @@ class Macro {
 			function __stateMachine(__result:Dynamic) {
 				do $eswitch while (true);
 			}
-			__stateMachine(null);
+			// __stateMachine(null);
+			return __stateMachine;
 		};
 	}
 

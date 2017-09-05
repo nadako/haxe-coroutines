@@ -37,6 +37,65 @@ class Main {
 
 		});
 
-		coro(10, value -> trace('Result: $value'));
+		var cont = coro(10, value -> trace('Result: $value'));
+		cont(null); // manually start
+
+
+		// generator
+		var gen = new Gen(transform(function(yield):Void {
+			yield(1);
+			yield(2);
+			yield(3);
+		}));
+
+		for (v in gen) {
+			trace(v);
+		}
+	}
+}
+
+typedef Yield<T> = T->Continuation<Any>->Void;
+
+enum GenState {
+	NotReady;
+	Ready;
+	Done;
+	Failed;
+}
+
+class Gen {
+	var nextStep:Continuation<Any>;
+	var nextValue:Int;
+	var state:GenState;
+
+	public function new(cont:Yield<Int>->Continuation<Dynamic>->Continuation<Any>) {
+		nextStep = cont(yield, done);
+		state = NotReady;
+	}
+
+	function yield(value:Int, next:Continuation<Dynamic>) {
+		nextValue = value;
+		state = Ready;
+	}
+
+	function done(result:Any) {
+		state = Done;
+	}
+
+	public function hasNext():Bool {
+		return switch state {
+			case Done: false;
+			case Ready: true;
+			case _:
+				state = Failed;
+				nextStep(null);
+				state == Ready;
+		}
+	}
+
+	public function next():Int {
+		if (!hasNext()) throw "no more";
+		state = NotReady;
+		return nextValue;
 	}
 }
