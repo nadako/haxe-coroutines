@@ -6,7 +6,7 @@ import haxe.macro.Type;
 using haxe.macro.Tools;
 
 enum Edge {
-	None;
+	Final;
 	Suspend(fn:Expr, args:Array<Expr>, bbNext:BasicBlock);
 	Next(bbNext:BasicBlock);
 	Loop(bbHead:BasicBlock, bbBody:BasicBlock, bbNext:BasicBlock);
@@ -29,7 +29,7 @@ class BasicBlock {
 		this.id = id;
 		elements = [];
 		vars = [];
-		edge = None;
+		edge = Final;
 	}
 
 	public function addElement(e) elements.push(e);
@@ -348,7 +348,7 @@ class FlowGraph {
 		}];
 
 		return switch eobj.expr {
-			case EConst(CIdent("await" | "awaitP" | "test")): // any suspending function, actually
+			case EConst(CIdent("await" | "awaitPromise" | "test")): // any suspending function, actually
 				hasSuspend = true;
 				var tmpVarName = "tmp" + (tmpVarId++);
 				bb.declareVar(tmpVarName, null);
@@ -394,7 +394,8 @@ class Macro {
 		var coroExpr = if (cfg.hasSuspend) {
 			buildStateMachine(cfg.root, fun.expr.pos);
 		} else {
-			buildSimpleCPS(cfg.root, fun.expr.pos);
+			buildStateMachine(cfg.root, fun.expr.pos);
+			// buildSimpleCPS(cfg.root, fun.expr.pos);
 		}
 
 		trace(coroExpr.toString());
@@ -430,6 +431,14 @@ class Macro {
 					exprs.push(macro {
 						__state = -1;
 						__continuation($last);
+						return;
+					});
+
+				case Final:
+					for (e in bb.elements) exprs.push(e);
+					exprs.push(macro {
+						__state = -1;
+						__continuation(null);
 						return;
 					});
 
@@ -484,6 +493,8 @@ class Macro {
 
 				case LoopHead(bbBody, bbNext):
 					var econd = bb.elements[bb.elements.length - 1];
+					for (i in 0...bb.elements.length - 1)
+						exprs.push(bb.elements[i]);
 
 					loop(bbBody);
 					loop(bbNext);
@@ -501,9 +512,6 @@ class Macro {
 					exprs.push(macro {
 						__state = $v{bbGoto.id};
 					});
-
-				case None:
-					throw "Unitialized block";
 			}
 
 			cases.unshift({
@@ -528,61 +536,58 @@ class Macro {
 		};
 	}
 
-	static function buildSimpleCPS(bbRoot:BasicBlock, pos:Position):Expr {
-		function loop(bb:BasicBlock, exprs:Array<Expr>) {
-			switch bb.edge {
-				case Suspend(_):
-					throw "Suspend in a non-suspending coroutine?";
+	// static function buildSimpleCPS(bbRoot:BasicBlock, pos:Position):Expr {
+	// 	function loop(bb:BasicBlock, exprs:Array<Expr>) {
+	// 		switch bb.edge {
+	// 			case Suspend(_):
+	// 				throw "Suspend in a non-suspending coroutine?";
 
-				case Return:
-					var last = bb.elements[bb.elements.length - 1];
-					for (i in 0...bb.elements.length - 1)
-						exprs.push(bb.elements[i]);
-					exprs.push(macro __continuation($last));
-					exprs.push(macro return);
+	// 			case Return:
+	// 				var last = bb.elements[bb.elements.length - 1];
+	// 				for (i in 0...bb.elements.length - 1)
+	// 					exprs.push(bb.elements[i]);
+	// 				exprs.push(macro __continuation($last));
+	// 				exprs.push(macro return);
 
-				case Next(bbNext):
-					for (e in bb.elements) exprs.push(e);
-					loop(bbNext, exprs);
+	// 			case Next(bbNext):
+	// 				for (e in bb.elements) exprs.push(e);
+	// 				loop(bbNext, exprs);
 
-				case Loop(bbHead, bbBody, bbNext):
-					for (e in bb.elements) exprs.push(e);
+	// 			case Loop(bbHead, bbBody, bbNext):
+	// 				for (e in bb.elements) exprs.push(e);
 
-					var headExprs = [];
-					loop(bbHead, headExprs);
-					var condExpr = headExprs.pop();
-					var bodyExprs = [];
-					loop(bbBody, bodyExprs);
-					var loopExpr = macro {
-						$b{headExprs};
-						if (!$condExpr) break;
-						$b{bodyExprs};
-					};
-					exprs.push(macro do $loopExpr while (true));
-					loop(bbNext, exprs);
+	// 				var headExprs = [];
+	// 				loop(bbHead, headExprs);
+	// 				var condExpr = headExprs.pop();
+	// 				var bodyExprs = [];
+	// 				loop(bbBody, bodyExprs);
+	// 				var loopExpr = macro {
+	// 					$b{headExprs};
+	// 					if (!$condExpr) break;
+	// 					$b{bodyExprs};
+	// 				};
+	// 				exprs.push(macro do $loopExpr while (true));
+	// 				loop(bbNext, exprs);
 
-				case LoopHead(_, _) | LoopBack(_):
-					for (e in bb.elements) exprs.push(e);
+	// 			case LoopHead(_, _) | LoopBack(_):
+	// 				for (e in bb.elements) exprs.push(e);
 
-				case LoopContinue(_):
-					for (e in bb.elements) exprs.push(e);
-					exprs.push(macro continue);
+	// 			case LoopContinue(_):
+	// 				for (e in bb.elements) exprs.push(e);
+	// 				exprs.push(macro continue);
 
-				case LoopBreak(_):
-					for (e in bb.elements) exprs.push(e);
-					exprs.push(macro break);
+	// 			case LoopBreak(_):
+	// 				for (e in bb.elements) exprs.push(e);
+	// 				exprs.push(macro break);
 
-				case IfThen(_, _) | IfThenElse(_, _, _):
-					throw "TODO";
+	// 			case IfThen(_, _) | IfThenElse(_, _, _):
+	// 				throw "TODO";
+	// 		}
+	// 	}
 
-				case None:
-					throw "Unitialized block";
-			}
-		}
-
-		var exprs = [];
-		loop(bbRoot, exprs);
-		return macro $b{exprs};
-	}
+	// 	var exprs = [];
+	// 	loop(bbRoot, exprs);
+	// 	return macro $b{exprs};
+	// }
 	#end
 }

@@ -4,25 +4,39 @@ import js.Promise;
 typedef Continuation<T> = T->Void;
 
 class Main {
+	// some async API
 	static var nextNumber = 0;
 	static function getNumber(cb:Int->Void) cb(++nextNumber);
-	static function getNumberP() return new Promise((resolve,_) -> getNumber(resolve));
+	static function getNumberPromise() return new Promise((resolve,_) -> getNumber(resolve));
 
-	// known (hard-coded) suspending functions
-	inline static function await<T>(f:(T->Void)->Void, cont:Continuation<T>):Void f(cont);
-	inline static function awaitP<T>(p:Promise<T>, cont:Continuation<T>):Void p.then(cont);
-	static function test(n:Int, cont:Continuation<String>):Void cont('hi $n times');
+	// known (hard-coded for now) suspending functions
+	inline static function await<T>(f:(T->Void)->Void, cont:Continuation<T>):Void
+		f(cont);
+
+	inline static function awaitPromise<T>(p:Promise<T>, cont:Continuation<T>):Void
+		p.then(cont);
+
+	static function test(n:Int, cont:Continuation<String>):Void
+		cont('hi $n times');
 
 	static function main() {
+		// sample coroutine
 		var coro = transform(function(n:Int):Int {
+
 			trace("hi");
-			var v = 0;
-			while (v++ < 10) {
-				trace(test(await(getNumber)));
+
+			while (await(getNumber) < 10) {
+				trace('wait for it...');
+
+				var promise = getNumberPromise();
+				trace(awaitPromise(promise));
 			}
-			var v = await(getNumber) + awaitP(getNumberP());
-			return n + v + await(getNumber);
+
+			trace("bye");
+			return 15;
+
 		});
+
 		coro(10, value -> trace('Result: $value'));
 	}
 }
