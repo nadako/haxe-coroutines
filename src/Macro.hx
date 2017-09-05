@@ -71,6 +71,12 @@ class LoopContext {
 class FlowGraph {
 	static var fakeValue = macro null;
 
+	static function isSuspendingFunction(name)
+		return switch name {
+			case "await" | "awaitPromise" | "test" | "yield": true;
+			case _: false;
+		}
+
 	public var hasSuspend(default,null) = false;
 	var nextBlockId = 0;
 	var bbUnreachable = new UnreachableBlock(-1);
@@ -348,7 +354,7 @@ class FlowGraph {
 		}];
 
 		return switch eobj.expr {
-			case EConst(CIdent("await" | "awaitPromise" | "test" | "yield")): // any suspending function, actually
+			case EConst(CIdent(name)) if (isSuspendingFunction(name)): // any suspending function, actually
 				hasSuspend = true;
 				var tmpVarName = "tmp" + (tmpVarId++);
 				bb.declareVar(tmpVarName, null);
