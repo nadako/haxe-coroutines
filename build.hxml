@@ -1,0 +1,5 @@
+-cp src
+-main Main
+-js main.js
+-D analyzer-optimize
+-dce full
