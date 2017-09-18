@@ -172,7 +172,7 @@ suspend function loadJson(url:String):MyData {
 
 Now when we talked about what coroutines are, what problems are they supposed to solve and how our approach differs from async/await/yield, let's describe the actual proposed design for coroutines in Haxe.
 
-Since coroutine functions have to be known by the compiler in order to be transformed into pausable re-entrant computation objects, we mark such functions with a special modifier. The simpliest way is to use a metadata, like `@:coro` or `suspend` (Kotlin-like). Another option is to introduce a proper keyword for that so it can be used in the line with other function modifiers (public, static, inline, etc). In examples below, I'll use `suspend` keyword as the modifier.
+Since coroutine functions have to be known by the compiler in order to be transformed into pausable re-entrant computation objects, we mark such functions with a special modifier. The simpliest way is to use a metadata, like `@:coro` or `@:suspend` (Kotlin-like). Another option is to introduce a proper keyword for that so it can be used in the line with other function modifiers (public, static, inline, etc). In examples below, I'll use `suspend` keyword as the modifier.
 
 When a coroutine function contains a call to another coroutine function, its execution is being paused until the called function resumes it. Let's call it pause point or suspension point. For example:
 
