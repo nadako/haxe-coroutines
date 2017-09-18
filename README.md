@@ -117,7 +117,7 @@ This document, however, proposes a very generic lower-level coroutines implement
 
 Haxe by its nature is designed to be used in a lot of different run-time environments, together with different APIs provided by target platforms and is suitable for various kinds of projects.
 
-With that in mind, when it comes to using coroutines, for the sake of better interoperability it should ideally support target-native promise/future/task abstraction types, as well as plain callback-based API, found in e.g. Node.js. Regarding generators, it's the same: while Haxe has the standard `Iterator` protocol, one might not want to use it in a specific application for performance or interop reasons.
+With that in mind, when it comes to using coroutines, for the sake of better interoperability it should ideally support target-native promise/future/task abstraction types, as well as plain callback-based API, found in e.g. Node.js. Regarding generators, it's the same: while Haxe has the standard `Iterator` protocol, one might not want to use it in a specific application for performance or interop reasons. Besides async operations and generators there are other use-cases for coroutines, like Go-like concurrency and DSLs for easily describing interaction scenarios and animations.
 
 So one of the requirement for the coroutines feature is to be able to easily tell the compiler when the coroutine must be suspended and, more importantly, how it's resumed and how to extract the result of a suspending call without wrapping every suspending call in a Haxe-specific promise-like object.
 
