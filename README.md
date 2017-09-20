@@ -703,3 +703,24 @@ for (v in gen) {
 ```
 
 > **TODO**: this needs a way to create a coroutine without actually starting it
+
+#### Mutexes
+
+One could combine coroutines and multi-threading by creating a mutex whose `lock` function suspends the execution of a coroutine, so other coroutines could work without blocking the whole thread while waiting for the mutex.
+
+```haxe
+class Mutex {
+  suspend function lock():Void;
+  function unlock():Void;
+}
+
+var mutex:Mutex;
+
+suspend function doSomething() {
+  mutex.lock(); // suspend until mutex is lockable
+  // ... process ...
+  mutex.unlock();
+}
+```
+
+> TODO: port some nice examples, like https://tour.golang.org/concurrency/9
