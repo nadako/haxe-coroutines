@@ -724,3 +724,43 @@ suspend function doSomething() {
 ```
 
 > TODO: port some nice examples, like https://tour.golang.org/concurrency/9
+
+#### Go-style concurrency
+
+Coroutines can be used to implement concurrency with channels similar to Go:
+
+```haxe
+interface SendChannel<T> {
+  suspend function send(value:T):Void;
+}
+
+interface ReceiveChannel<T> {
+  suspend function receive():T;
+}
+
+class Channel<T> implements SendChannel<T> implements ReceiveChannel<T> {
+  // ...implementation here
+}
+
+/** Starts a coroutine in a multi-threaded pool */
+function go<T:Function>(coro:Suspend<T>);
+
+// ---
+
+suspend function naturals(n:Int, c:SendChannel<Int>) {
+  for (i in 0...n)
+    c.send(i);
+}
+
+function main() {
+  var c = new Channel();
+
+  go(() -> naturals(10, c)); // dispatch coro to some thread
+
+  trace(c.receive()); // receive values from the channel
+  trace(c.receive());
+  trace(c.receive());
+}
+```
+
+> TODO: port https://tour.golang.org/concurrency/4
