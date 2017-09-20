@@ -678,7 +678,7 @@ public function resume(result:Any):Void {
 
 ### More usage examples
 
-TODO
+TODO: add more promise-building examples (there's one above), add cps-style builders from coroutines, maybe something more...
 
 #### Generators
 
