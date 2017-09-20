@@ -675,3 +675,31 @@ public function resume(result:Any):Void {
   } while (true); // this can be replaced by goto operators for targets that support them
 }
 ```
+
+### More usage examples
+
+TODO
+
+#### Generators
+
+`yield` would be a simple suspending function and we can use anonymous suspending function for the generator body like this:
+
+```haxe
+typedef Yield<T> = Suspend<T->Void>;
+
+function buildGenerator<T>(coro:Suspend<Yield<T>->Void>):Iterator<T>;
+
+var gen = buildGenerator(yield -> {
+  var i = 0;
+  while (true) {
+    yield(i);
+    i++;
+  }
+});
+
+for (v in gen) {
+  trace(v);
+}
+```
+
+> **TODO**: this needs a way to create a coroutine without actually starting it
