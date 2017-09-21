@@ -678,7 +678,8 @@ public function resume(result:Any):Void {
 
 ### More usage examples
 
-TODO: add more promise-building examples (there's one above), add cps-style builders from coroutines, maybe something more...
+We've already shown some examples of creating and awaiting promises using coroutines (see previous sections), let's now
+take a look at some use-cases for coroutines that are not directly related to awaiting asynchronous computations.
 
 #### Generators
 
@@ -702,7 +703,7 @@ for (v in gen) {
 }
 ```
 
-> **TODO**: this needs a way to create a coroutine without actually starting it
+> **TODO**: this needs a way to create a coroutine without actually starting it, because the coroutine should be resumed when `next` is called, not right away
 
 #### Mutexes
 
