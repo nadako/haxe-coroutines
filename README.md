@@ -1,6 +1,6 @@
 # !!! THIS IS A WORK-IN-PROGRESS MATERIAL, NOTHING SET IN STONE AND EVERYTHING IS TO BE DISCUSSED. THIS DOCUMENT WILL BE EDITED AND CHANGED OFTEN !!!
 
-## This is heavily inspired by [Kotlin coroutines design](https://github.com/Kotlin/kotlin-coroutines/blob/master/kotlin-coroutines-informal.md), reduced and adapted for Haxe.
+## This is heavily inspired by [Kotlin coroutines design](https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md), reduced and adapted for Haxe.
 
 # Coroutines for Haxe
 
